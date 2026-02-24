@@ -84,6 +84,8 @@ def load_config_unified(config_path: str) -> dict:
     else:
         sprint_boards = {}
 
+    fisk = raw.get("fisk", {})
+
     return {
         "base_url": base_url.rstrip("/"),
         "username": username,
@@ -92,6 +94,8 @@ def load_config_unified(config_path: str) -> dict:
         "sprint_boards": sprint_boards,
         "done_statuses": raw.get("done_statuses", ["Done", "Closed", "Resolved"]),
         "output_directory": raw.get("output_directory", raw.get("directory", ".")),
+        "db_path": fisk.get("db_path"),
+        "projects": fisk.get("projects", {}),
         "_raw": raw,
     }
 

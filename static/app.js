@@ -1,21 +1,8 @@
 "use strict";
 
-// ── Project config ──────────────────────────────────────────────────
-const PROJECT_COLORS = {
-  FED: "#2563EB",
-  DIP: "#7C3AED",
-  SUP: "#D97706",
-  OOT: "#059669",
-  SSJ: "#DC2626",
-};
-
-const PROJECT_NAMES = {
-  FED: "Front End Dev",
-  DIP: "Data & Integrations Platform",
-  SUP: "Engineering Support",
-  OOT: "Onboarding and Originations Team",
-  SSJ: "SSJ Project",
-};
+// ── Project config (populated from /api/config) ─────────────────────
+let PROJECT_COLORS = {};
+let PROJECT_NAMES  = {};
 
 // For cycle time: growing is bad (taking longer), shrinking is good
 const CT_TREND = {
@@ -42,7 +29,13 @@ let jiraBaseUrl = "";
 // ── Init ────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
   setupTabNav();
-  await api("/api/config").then(c => { jiraBaseUrl = c.jira_base_url || ""; }).catch(() => {});
+  await api("/api/config").then(c => {
+    jiraBaseUrl = c.jira_base_url || "";
+    Object.entries(c.projects || {}).forEach(([key, p]) => {
+      PROJECT_COLORS[key] = p.color;
+      PROJECT_NAMES[key]  = p.name;
+    });
+  }).catch(() => {});
   await initProjects();
   await populateEngineerDropdown();
   await loadOverview();

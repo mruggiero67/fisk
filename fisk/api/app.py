@@ -37,6 +37,14 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 @app.on_event("startup")
 def startup():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    try:
+        from fisk.jira.utils import load_config_unified
+        import fisk.api.db as _db
+        cfg = load_config_unified(CONFIG_PATH)
+        if cfg.get("db_path"):
+            _db.DB_PATH = Path(cfg["db_path"]).expanduser()
+    except Exception as e:
+        logger.warning(f"Could not read db_path from config: {e}")
     init_db()
 
 
@@ -116,9 +124,9 @@ def config_info():
     from fisk.jira.utils import load_config_unified
     try:
         cfg = load_config_unified(CONFIG_PATH)
-        return {"jira_base_url": cfg["base_url"]}
+        return {"jira_base_url": cfg["base_url"], "projects": cfg.get("projects", {})}
     except Exception:
-        return {"jira_base_url": ""}
+        return {"jira_base_url": "", "projects": {}}
 
 
 @app.get("/api/projects/{project_key}/issues")
