@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fisk — Engineering Metrics</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-brand">
+      <h1>Engineering Metrics</h1>
+    </div>
+    <div class="header-actions">
+      <span id="sync-status" class="sync-status"></span>
+      <button id="refresh-btn" class="btn-primary" onclick="triggerSync()">↻ Refresh Data</button>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="cycle-time">Cycle Time</button>
+    <button class="tab-btn" data-tab="volume">Ticket Volume</button>
+    <button class="tab-btn" data-tab="velocity">Velocity</button>
+    <button class="tab-btn" data-tab="engineers">Engineers</button>
+    <button class="tab-btn" data-tab="stage-durations">Stage Durations</button>
+    <button class="tab-btn" data-tab="insights">Insights</button>
+  </nav>
+
+  <main class="tab-container">
+
+    <section id="tab-overview" class="tab-pane active">
+      <div class="pane-header">
+        <h2>All Projects — At a Glance</h2>
+        <div class="controls">
+          <label>Weeks
+            <select id="ov-weeks" onchange="loadOverview()">
+              <option value="8" selected>8 weeks</option>
+              <option value="12">12 weeks</option>
+              <option value="26">26 weeks</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="overview-grid" class="overview-grid">
+        <p class="empty-state">Loading projects…</p>
+      </div>
+    </section>
+
+    <section id="tab-cycle-time" class="tab-pane">
+      <div class="pane-header">
+        <h2>Cycle Time</h2>
+        <div class="controls">
+          <label>Project <select id="ct-project" onchange="loadCycleTime()"></select></label>
+          <label>Weeks
+            <select id="ct-weeks" onchange="loadCycleTime()">
+              <option value="8" selected>8 weeks</option>
+              <option value="12">12 weeks</option>
+              <option value="26">26 weeks</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="ct-trend-badge" class="trend-badge trend-neutral" style="display:none"></div>
+      <div class="chart-wrapper"><canvas id="ct-chart"></canvas></div>
+      <p id="ct-empty" class="empty-state" style="display:none">No data available for this project and date range.</p>
+      <div id="ct-drilldown" class="drilldown-panel" style="display:none">
+        <div class="drilldown-header">
+          <span id="ct-drilldown-title" class="drilldown-title"></span>
+          <button class="drilldown-close" onclick="closeDrilldown('ct')">✕</button>
+        </div>
+        <div id="ct-drilldown-table"></div>
+      </div>
+    </section>
+
+    <section id="tab-volume" class="tab-pane">
+      <div class="pane-header">
+        <h2>Ticket Volume</h2>
+        <div class="controls">
+          <label>Project <select id="vol-project" onchange="loadVolume()"></select></label>
+          <label>Weeks
+            <select id="vol-weeks" onchange="loadVolume()">
+              <option value="8" selected>8 weeks</option>
+              <option value="12">12 weeks</option>
+              <option value="26">26 weeks</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="vol-trend-badge" class="trend-badge trend-neutral" style="display:none"></div>
+      <div class="chart-wrapper"><canvas id="vol-chart"></canvas></div>
+      <p id="vol-empty" class="empty-state" style="display:none">No data available for this project and date range.</p>
+      <div id="vol-drilldown" class="drilldown-panel" style="display:none">
+        <div class="drilldown-header">
+          <span id="vol-drilldown-title" class="drilldown-title"></span>
+          <button class="drilldown-close" onclick="closeDrilldown('vol')">✕</button>
+        </div>
+        <div id="vol-drilldown-table"></div>
+      </div>
+    </section>
+
+    <section id="tab-velocity" class="tab-pane">
+      <div class="pane-header">
+        <h2>Sprint Velocity</h2>
+        <div class="controls">
+          <label>Project <select id="vel-project" onchange="loadVelocity()"></select></label>
+          <label>Weeks
+            <select id="vel-weeks" onchange="loadVelocity()">
+              <option value="4">4 weeks</option>
+              <option value="8" selected>8 weeks</option>
+              <option value="12">12 weeks</option>
+              <option value="26">26 weeks</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="chart-wrapper"><canvas id="vel-chart"></canvas></div>
+      <div id="vel-stats" class="vel-stats-bar" style="display:none">
+        <div class="vel-stat-item">
+          <span class="vel-stat-label">Mean completed / sprint</span>
+          <span class="vel-stat-value" id="vel-stat-mean">—</span>
+        </div>
+        <div class="vel-stat-item">
+          <span class="vel-stat-label">Median</span>
+          <span class="vel-stat-value" id="vel-stat-median">—</span>
+        </div>
+        <div class="vel-stat-item">
+          <span class="vel-stat-label">Std dev</span>
+          <span class="vel-stat-value" id="vel-stat-stddev">—</span>
+        </div>
+      </div>
+      <p id="vel-empty" class="empty-state" style="display:none">No sprint data available. Sprint velocity data requires a board sync.</p>
+      <div id="vel-drilldown" class="drilldown-panel" style="display:none">
+        <div class="drilldown-header">
+          <span id="vel-drilldown-title" class="drilldown-title"></span>
+          <button class="drilldown-close" onclick="closeDrilldown('vel')">✕</button>
+        </div>
+        <div id="vel-drilldown-table"></div>
+      </div>
+    </section>
+
+    <section id="tab-engineers" class="tab-pane">
+      <div class="pane-header">
+        <h2>Engineers</h2>
+        <div class="controls">
+          <label>Engineer
+            <select id="eng-select" onchange="loadEngineerStats()">
+              <option value="">Select an engineer…</option>
+            </select>
+          </label>
+          <label>Weeks
+            <select id="eng-weeks" onchange="loadEngineerStats()">
+              <option value="8" selected>8 weeks</option>
+              <option value="12">12 weeks</option>
+              <option value="26">26 weeks</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <p id="eng-prompt" class="empty-state">Select an engineer to view their stats.</p>
+      <div id="eng-cards" class="stat-cards"></div>
+      <div class="chart-wrapper" id="eng-chart-wrapper" style="display:none">
+        <canvas id="eng-chart"></canvas>
+      </div>
+      <div id="eng-drilldown" class="drilldown-panel" style="display:none">
+        <div class="drilldown-header">
+          <span id="eng-drilldown-title" class="drilldown-title"></span>
+          <button class="drilldown-close" onclick="closeDrilldown('eng')">✕</button>
+        </div>
+        <div id="eng-drilldown-table"></div>
+      </div>
+    </section>
+
+    <section id="tab-stage-durations" class="tab-pane">
+      <div class="pane-header">
+        <h2>Stage Durations</h2>
+        <div class="controls">
+          <label>Project <select id="sd-project" onchange="loadStageDurations()"></select></label>
+          <label>Weeks
+            <select id="sd-weeks" onchange="loadStageDurations()">
+              <option value="8">8 weeks</option>
+              <option value="12" selected>12 weeks</option>
+              <option value="26">26 weeks</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="chart-wrapper"><canvas id="sd-chart"></canvas></div>
+      <p id="sd-empty" class="empty-state" style="display:none">No stage duration data available. Stage data requires changelog sync.</p>
+      <div id="sd-drilldown" class="drilldown-panel" style="display:none">
+        <div class="drilldown-header">
+          <span id="sd-drilldown-title" class="drilldown-title"></span>
+          <button class="drilldown-close" onclick="closeDrilldown('sd')">✕</button>
+        </div>
+        <div id="sd-drilldown-table"></div>
+      </div>
+    </section>
+
+    <section id="tab-insights" class="tab-pane">
+      <div class="pane-header">
+        <h2>Insights</h2>
+      </div>
+      <div class="insights-input">
+        <textarea id="insights-q" rows="4"
+          placeholder="Ask a question about your engineering data…
+
+Examples:
+• Which project has the longest average cycle time?
+• Is FED's ticket volume growing or shrinking?
+• Who resolved the most tickets in SUP over the last 8 weeks?
+• Which workflow stage is the biggest bottleneck?"></textarea>
+        <button class="btn-primary" onclick="askInsights()">Ask →</button>
+      </div>
+      <div id="insights-answer" class="insights-answer"></div>
+    </section>
+
+  </main>
+
+</body>
+</html>
